@@ -1,0 +1,22 @@
+import chainer
+import chainer.functions as F
+import chainer.links as L
+
+class ImageCaption(chainer.Chain):
+    def __init__(self, word_num, feature_num, hidden_num):
+        super(ImageCaption, self).__init__(
+            word_vec = L.EmbedID(word_num, hidden_num),
+            image_vec = L.Linear(feature_num, hidden_num),
+            lstm = L.LSTM(hidden_num, hidden_num),
+            out_word = L.Linear(hidden_num, word_num),
+        )
+
+    def initialize(self, image_feature, train=True):
+        self.lstm.reset_state()
+        h = self.image_vec(F.dropout(image_feature, train=train))
+        self.lstm(F.dropout(h, train=train))
+
+    def __call__(self, word, train=True):
+        h1 = self.word_vec(word)
+        h2 = self.lstm(F.dropout(h1, train=train))
+        return self.out_word(F.dropout(h2, train=train))

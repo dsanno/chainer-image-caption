@@ -1,2 +1,5 @@
+*.pyc
 dataset
 !dataset/.gitkeep
+model
+!model/.gitkeep
