@@ -21,28 +21,40 @@ word_ids = {
     '<UNK>': 2,
 }
 unknown = 2
+min_word_count = 5
+
 converted_sentences = {
-    k: {n: [] for n in range(1, 41)} for k in ['train', 'val', 'test']
+    k: {n: [] for n in range(1, 51)} for k in ['train', 'val', 'test', 'restval']
 }
 converted_image_ids = {
-    k: {n: [] for n in range(1, 41)} for k in ['train', 'val', 'test']
+    k: {n: [] for n in range(1, 51)} for k in ['train', 'val', 'test', 'restval']
 }
-
-def add_words(tokens):
-    for token in tokens:
-        if not token in word_ids:
-            word_ids[token] = len(word_ids)
 
 def words_to_ids(tokens):
     return [ word_ids[token] if token in word_ids else unknown for token in tokens]
+
+# treat words as <UNK> that appear few times
+word_counts = {}
+for image in input_dataset['images']:
+    data_type = image['split']
+    if data_type != 'train':
+        continue
+    for sentence in image['sentences']:
+        for token in sentence['tokens']:
+            if token in word_counts:
+                word_counts[token] += 1
+            else:
+                word_counts[token] = 1
+for word, count in word_counts.items():
+    if count < min_word_count:
+        continue
+    word_ids[word] = len(word_ids)
 
 for image in input_dataset['images']:
     image_id = image['imgid']
     data_type = image['split']
     for sentence in image['sentences']:
         tokens = sentence['tokens']
-        if data_type == 'train':
-            add_words(tokens)
         converted_sentences[data_type][len(tokens)].append(words_to_ids(sentence['tokens']))
         converted_image_ids[data_type][len(tokens)].append(image_id)
 

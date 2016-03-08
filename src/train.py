@@ -47,8 +47,8 @@ test_image_ids = sentence_dataset['images']['test']
 test_sentences = sentence_dataset['sentences']['test']
 word_ids = sentence_dataset['word_ids']
 feature_num = images.shape[1]
-hidden_num = 1024
-batch_size = 20
+hidden_num = 512
+batch_size = 128
 
 print 'word count: ', len(word_ids)
 caption_net = ImageCaption(len(word_ids), feature_num, hidden_num)
@@ -79,7 +79,7 @@ def random_batches(image_groups, sentence_groups):
 
 def make_groups(image_ids, sentences, train=True):
     if train:
-        boundaries = [1, 6, 11, 16, 21, 31, 41]
+        boundaries = [1, 6, 11, 16, 21, 31, 41, 51]
     else:
         boundaries = range(1, 41)
     sentence_groups = []
