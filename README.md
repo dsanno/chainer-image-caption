@@ -30,12 +30,41 @@ $ python src/train.py -g 0 -s dataset.pkl -i vgg_feats.mat -o model/caption_gen
 
 Options:
 * -g, --gpu: (optional) GPU device index (default: -1).
-* -s, --sentence: (required) sentence dataset file.
-* -i, --image: (required) image feature file.
+* -s, --sentence: (required) sentence dataset file path.
+* -i, --image: (required) image feature file path.
 * -m, --model: (optional) input model file path without extension.
 * -o, --output: (required) output model file path without extension.
 * --iter: (optional) the number of iterations (default: 100).
 
-## License
+## Convert VGG 19-layer caffemodel to pkl file
+
+```
+$ python src/convert_caffemodel_to_pkl.py VGG_ILSVRC_19_layers.caffemodel vgg19.pkl
+```
+
+Parameters:
+* caffe model file path.
+* output pkl file path.
+
+## Generate image caption
+
+```
+$ python src/generate_caption.py -s dataset.pkl -i vgg19.pkl -m model/caption_gen_0010.model -l image/label.txt
+```
+
+Options:
+* -s, sentence: (required) sentence dataset file path.
+* -i, --image: (required) image model file path.
+* -m, --model: (required) trained model file path.
+* -l, --list: (required) image path list file.
+
+### Image path list file sample
+
+```
+image/asakusa.jpg
+image/tree.jpg
+```
+
+# License
 
 MIT License
