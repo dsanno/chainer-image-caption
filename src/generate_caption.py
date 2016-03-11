@@ -53,7 +53,7 @@ with open(args.list) as f:
 
 def generate(net, image_model, image_path):
     feature = image_model.feature(image_path)
-    net.initialize(feature)
+    net.initialize(feature, train=False)
     candidates = [(net, [bos], 0)]
 
     for i in range(max_length):
