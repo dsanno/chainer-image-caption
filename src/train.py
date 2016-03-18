@@ -62,7 +62,7 @@ if args.model is not None:
     serializers.load_hdf5(args.model + '.state', optimizer)
 
 bos = word_ids['<S>']
-eof = word_ids['</S>']
+eos = word_ids['</S>']
 unknown = word_ids['<UNK>']
 
 def random_batches(image_groups, sentence_groups):
@@ -86,7 +86,7 @@ def make_groups(image_ids, sentences, train=True):
     image_groups = []
     for begin, end in zip(boundaries[:-1], boundaries[1:]):
         size = sum(map(lambda x: len(sentences[x]), range(begin, end)))
-        sub_sentences = np.full((size, end + 1), eof, dtype=np.int32)
+        sub_sentences = np.full((size, end + 1), eos, dtype=np.int32)
         sub_sentences[:, 0] = bos
         sub_image_ids = np.zeros((size,), dtype=np.int32)
         offset = 0
@@ -103,16 +103,24 @@ def make_groups(image_ids, sentences, train=True):
 def forward(net, image_batch, sentence_batch, train=True):
     images = Variable(xp.asarray(image_batch), volatile=not train)
     n, sentence_length = sentence_batch.shape
-    net.initialize(images)
+    net.initialize(images, train=train)
     loss = 0
     acc = 0
+    size = 0
     for i in range(sentence_length - 1):
+        target = xp.where(xp.asarray(sentence_batch[:, i]) != eos, 1, 0).astype(np.float32)
+        if (target == 0).all():
+            break
         x = Variable(xp.asarray(sentence_batch[:, i]), volatile=not train)
         t = Variable(xp.asarray(sentence_batch[:, i + 1]), volatile=not train)
         y = net(x, train=train)
+        y_max_index = xp.argmax(y.data, axis=1)
+        mask = target.reshape((len(target), 1)).repeat(y.data.shape[1], axis=1)
+        y = y * Variable(mask, volatile=not train)
         loss += F.softmax_cross_entropy(y, t)
-        acc += accuracy.accuracy(y, t)
-    return loss, acc
+        acc += xp.sum((y_max_index == t.data) * target)
+        size += xp.sum(target)
+    return loss / size, float(acc) / size, float(size)
 
 def train(epoch_num):
     image_groups, sentence_groups = make_groups(train_image_ids, train_sentences)
@@ -124,17 +132,17 @@ def train(epoch_num):
         sum_size = 0
         batch_num = len(batches)
         for i, (image_id_batch, sentence_batch) in enumerate(batches):
-            loss, acc = forward(caption_net, images[image_id_batch], sentence_batch)
+            loss, acc, size = forward(caption_net, images[image_id_batch], sentence_batch)
             optimizer.zero_grads()
             loss.backward()
             loss.unchain_backward()
             optimizer.update()
             sentence_length = sentence_batch.shape[1]
-            sum_loss += float(loss.data) * len(sentence_batch)
-            sum_acc += float(acc.data) * len(sentence_batch)
-            sum_size += len(sentence_batch) * (sentence_length - 1)
-            if (i + 1) % 1000 == 0:
-                print '{} / {}'.format(i + 1, batch_num)
+            sum_loss += float(loss.data) * size
+            sum_acc += acc * size
+            sum_size += size
+            if (i + 1) % 500 == 0:
+                print '{} / {} loss: {} accuracy: {}'.format(i + 1, batch_num, sum_loss / sum_size, sum_acc / sum_size)
         print 'epoch: {} done'.format(epoch + 1)
         print 'train loss: {} accuracy: {}'.format(sum_loss / sum_size, sum_acc / sum_size)
         sum_loss = 0
@@ -147,11 +155,11 @@ def train(epoch_num):
             for i in range(0, size, batch_size):
                 image_id_batch = image_ids[i:i + batch_size]
                 sentence_batch = sentences[i:i + batch_size]
-                loss, acc = forward(caption_net, images[image_id_batch], sentence_batch, train=False)
+                loss, acc, size = forward(caption_net, images[image_id_batch], sentence_batch, train=False)
                 sentence_length = sentence_batch.shape[1]
-                sum_loss += float(loss.data) * len(sentence_batch)
-                sum_acc += float(acc.data) * len(sentence_batch)
-                sum_size += len(sentence_batch) * (sentence_length - 1)
+                sum_loss += float(loss.data) * size
+                sum_acc += acc * size
+                sum_size += size
         print 'test loss: {} accuracy: {}'.format(sum_loss / sum_size, sum_acc / sum_size)
 
         serializers.save_hdf5(args.output + '_{0:04d}.model'.format(epoch), caption_net)

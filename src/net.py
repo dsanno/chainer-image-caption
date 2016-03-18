@@ -3,6 +3,7 @@ import chainer.functions as F
 import chainer.links as L
 
 class ImageCaption(chainer.Chain):
+    dropout_ratio = 0.5
     def __init__(self, word_num, feature_num, hidden_num):
         super(ImageCaption, self).__init__(
             word_vec = L.EmbedID(word_num, hidden_num),
@@ -13,10 +14,10 @@ class ImageCaption(chainer.Chain):
 
     def initialize(self, image_feature, train=True):
         self.lstm.reset_state()
-        h = self.image_vec(F.dropout(image_feature, train=train))
-        self.lstm(F.dropout(h, train=train))
+        h = self.image_vec(F.dropout(image_feature, ratio=self.dropout_ratio, train=train))
+        self.lstm(F.dropout(h, ratio=self.dropout_ratio, train=train))
 
     def __call__(self, word, train=True):
         h1 = self.word_vec(word)
-        h2 = self.lstm(F.dropout(h1, train=train))
-        return self.out_word(F.dropout(h2, train=train))
+        h2 = self.lstm(F.dropout(h1, ratio=self.dropout_ratio, train=train))
+        return self.out_word(F.dropout(h2, ratio=self.dropout_ratio, train=train))
