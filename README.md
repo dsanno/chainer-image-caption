@@ -49,7 +49,7 @@ Parameters:
 ## Generate image caption
 
 ```
-$ python src/generate_caption.py -s dataset.pkl -i vgg19.pkl -m model/caption_gen_0010.model -l image/label.txt
+$ python src/generate_caption.py -s dataset.pkl -i vgg19.pkl -m model/caption_gen_0010.model -l image/list.txt
 ```
 
 Options:

@@ -1,5 +1,5 @@
 *.pyc
-dataset
+dataset/*
 !dataset/.gitkeep
-model
+model/*
 !model/.gitkeep
