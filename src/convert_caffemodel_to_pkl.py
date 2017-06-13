@@ -1,5 +1,5 @@
 import cPickle as pickle
-from chainer.functions import caffe
+from chainer.links import caffe
 import sys
 
 model_path = sys.argv[1]

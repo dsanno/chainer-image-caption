@@ -7,7 +7,7 @@ import numpy as np
 import scipy.io
 import random
 import chainer
-from chainer import cuda, Variable, optimizers, serializers, functions as F
+from chainer import cuda, optimizers, serializers, functions as F
 from chainer.functions.evaluation import accuracy
 from net import ImageCaption
 import time
@@ -101,9 +101,9 @@ def make_groups(image_ids, sentences, train=True):
     return image_groups, sentence_groups
 
 def forward(net, image_batch, sentence_batch, train=True):
-    images = Variable(xp.asarray(image_batch), volatile=not train)
+    images = xp.asarray(image_batch)
     n, sentence_length = sentence_batch.shape
-    net.initialize(images, train=train)
+    net.initialize(images)
     loss = 0
     acc = 0
     size = 0
@@ -111,15 +111,17 @@ def forward(net, image_batch, sentence_batch, train=True):
         target = xp.where(xp.asarray(sentence_batch[:, i]) != eos, 1, 0).astype(np.float32)
         if (target == 0).all():
             break
-        x = Variable(xp.asarray(sentence_batch[:, i]), volatile=not train)
-        t = Variable(xp.asarray(sentence_batch[:, i + 1]), volatile=not train)
-        y = net(x, train=train)
-        y_max_index = xp.argmax(y.data, axis=1)
-        mask = target.reshape((len(target), 1)).repeat(y.data.shape[1], axis=1)
-        y = y * Variable(mask, volatile=not train)
-        loss += F.softmax_cross_entropy(y, t)
-        acc += xp.sum((y_max_index == t.data) * target)
-        size += xp.sum(target)
+        with chainer.using_config('train', train):
+            with chainer.using_config('enable_backprop', train):
+                x = xp.asarray(sentence_batch[:, i])
+                t = xp.asarray(sentence_batch[:, i + 1])
+                y = net(x)
+                y_max_index = xp.argmax(y.data, axis=1)
+                mask = target.reshape((len(target), 1)).repeat(y.data.shape[1], axis=1)
+                y = y * mask
+                loss += F.softmax_cross_entropy(y, t)
+                acc += xp.sum((y_max_index == t) * target)
+                size += xp.sum(target)
     return loss / size, float(acc) / size, float(size)
 
 def train(epoch_num):
@@ -133,7 +135,7 @@ def train(epoch_num):
         batch_num = len(batches)
         for i, (image_id_batch, sentence_batch) in enumerate(batches):
             loss, acc, size = forward(caption_net, images[image_id_batch], sentence_batch)
-            optimizer.zero_grads()
+            caption_net.cleargrads()
             loss.backward()
             loss.unchain_backward()
             optimizer.update()

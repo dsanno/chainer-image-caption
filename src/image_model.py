@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 import chainer
 from chainer import cuda, functions as F
-from chainer.functions import caffe
+from chainer.links import caffe
 
 class ImageModel(object):
     def __init__(self):
@@ -15,7 +15,7 @@ class ImageModel(object):
     def feature(self, image_path):
         xp = self.func.xp
         array = xp.asarray(self.load_image(image_path))
-        x = chainer.Variable(xp.ascontiguousarray(array), volatile=True)
+        x = xp.ascontiguousarray(array)
         return self._feature(x)
 
     def load(self, path):
@@ -71,5 +71,5 @@ class VGG19(ImageModel):
         return mean_image
 
     def _feature(self, x):
-        y, = self.func(inputs={'data': x}, outputs=['fc7'], train=False)
+        y, = self.func(inputs={'data': x}, outputs=['fc7'])
         return y

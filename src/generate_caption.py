@@ -3,6 +3,8 @@ import numpy as np
 import cPickle as pickle
 from image_model import VGG19
 from net import ImageCaption
+
+import chainer
 from chainer import Variable, serializers, cuda, functions as F
 
 parser = argparse.ArgumentParser(description='Generate image caption')
@@ -53,7 +55,7 @@ with open(args.list) as f:
 
 def generate(net, image_model, image_path):
     feature = image_model.feature(image_path)
-    net.initialize(feature, train=False)
+    net.initialize(feature)
     candidates = [(net, [bos], 0)]
 
     for i in range(max_length):
@@ -63,8 +65,8 @@ def generate(net, image_model, image_path):
                 next_candidates.append((None, tokens, likelihood))
                 continue
             net = prev_net.copy()
-            x = Variable(xp.asarray([tokens[-1]]).astype(np.int32), volatile=True)
-            y = F.softmax(net(x, train=False))
+            x = xp.asarray([tokens[-1]]).astype(np.int32)
+            y = F.softmax(net(x))
             token_likelihood = np.log(cuda.to_cpu(y.data[0]))
             order = token_likelihood.argsort()[:-beam_width:-1]
             next_candidates.extend([(net, tokens + [i], likelihood + token_likelihood[i]) for i in order])
@@ -73,9 +75,11 @@ def generate(net, image_model, image_path):
             break
     return [candidate[1] for candidate in candidates]
 
-for path in paths:
-    sentences = generate(caption_net, image_model, path)
-    print '# ', path
-    for token_ids in sentences[:5]:
-        tokens = [id_to_word[token_id] for token_id in token_ids[1:-1]]
-        print ' '.join(tokens)
+with chainer.using_config('train', False):
+    with chainer.using_config('enable_backprop', False):
+        for path in paths:
+            sentences = generate(caption_net, image_model, path)
+            print '# ', path
+            for token_ids in sentences[:5]:
+                tokens = [id_to_word[token_id] for token_id in token_ids[1:-1]]
+                print ' '.join(tokens)

@@ -12,12 +12,12 @@ class ImageCaption(chainer.Chain):
             out_word = L.Linear(hidden_num, word_num),
         )
 
-    def initialize(self, image_feature, train=True):
+    def initialize(self, image_feature):
         self.lstm.reset_state()
-        h = self.image_vec(F.dropout(image_feature, ratio=self.dropout_ratio, train=train))
-        self.lstm(F.dropout(h, ratio=self.dropout_ratio, train=train))
+        h = self.image_vec(F.dropout(image_feature, ratio=self.dropout_ratio))
+        self.lstm(F.dropout(h, ratio=self.dropout_ratio))
 
     def __call__(self, word, train=True):
         h1 = self.word_vec(word)
-        h2 = self.lstm(F.dropout(h1, ratio=self.dropout_ratio, train=train))
-        return self.out_word(F.dropout(h2, ratio=self.dropout_ratio, train=train))
+        h2 = self.lstm(F.dropout(h1, ratio=self.dropout_ratio))
+        return self.out_word(F.dropout(h2, ratio=self.dropout_ratio))
