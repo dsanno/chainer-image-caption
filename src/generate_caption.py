@@ -68,7 +68,7 @@ def generate(net, image_model, image_path):
             x = xp.asarray([tokens[-1]]).astype(np.int32)
             y = F.softmax(net(x))
             token_likelihood = np.log(cuda.to_cpu(y.data[0]))
-            order = token_likelihood.argsort()[:-beam_width:-1]
+            order = token_likelihood.argsort()[-beam_width:][::-1]
             next_candidates.extend([(net, tokens + [i], likelihood + token_likelihood[i]) for i in order])
         candidates = sorted(next_candidates, key=lambda x: -x[2])[:beam_width]
         if all([candidate[1][-1] == eos for candidate in candidates]):
